@@ -1,0 +1,6 @@
+[submodule "port"]
+	path = port
+	url = https://github.com/biosed/nxnative-asahi.git
+[submodule "mesa"]
+	path = mesa
+	url = https://github.com/biosed/mesa-honeykrisp-mesh.git

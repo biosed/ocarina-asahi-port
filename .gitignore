@@ -1,0 +1,7 @@
+# Build output of the port and the driver
+port/dm/linux/gen/
+mesa/build/
+mesa/gen/
+*.o
+*.a
+*.so
