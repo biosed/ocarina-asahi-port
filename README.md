@@ -40,8 +40,8 @@ git clone --recurse-submodules https://github.com/biosed/ocarina-asahi-port.git
 cd ocarina-asahi-port
 ```
 
-The repositories are currently private. The cloning account needs access to
-this repository and both submodules.
+This repository and both required submodules are public; no GitHub account or
+private token is needed to clone them.
 
 | Path | Contents |
 |---|---|
