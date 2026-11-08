@@ -68,7 +68,7 @@ sudo dnf install \
   dotnet-sdk-10.0 \
   meson ninja-build gcc gcc-c++ \
   python3-mako python3-pyyaml python3-packaging \
-  libdrm-devel wayland-devel glslang spirv-tools
+  libdrm-devel wayland-devel glslang glslc spirv-tools
 ```
 
 The NSO rewriter requires Capstone 5.x, not Capstone 6. Verify it:
@@ -337,6 +337,21 @@ Still open: render-target/coherence correctness, missing geometry, lighting
 and colour, meshlet coverage, dynamic-resolution cost, pipeline stalls, memory
 growth and later-area stability. “It boots” is established; “it is comfortably
 playable” is not.
+
+## Broader direction
+
+Ocarina is the proving title for a more general native Linux stack: bounded
+Switch 2 AArch64 module rewriting, Linux host services, reusable NVN2 command
+replay, NVIDIA SM86 shader translation to validated SPIR-V, and a Vulkan 1.3
+backend. This is deliberately not a CPU or console emulator—the title's own
+arm64 code runs natively.
+
+The long-term renderer should be title-independent and driver-independent.
+Honeykrisp supplies the current Apple G13 path; RADV/BC-250 and conformant
+desktop Vulkan drivers are the next portability targets. Title-specific facts
+belong in profiles, while NVN2, shader and synchronization fixes belong in the
+shared implementation. See [`AGENTS.md`](AGENTS.md) for the engineering rules,
+test matrix and continuation workflow.
 
 ## Licences
 
