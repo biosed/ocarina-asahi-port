@@ -2,6 +2,7 @@
 port/dm/linux/gen/
 mesa/build/
 mesa/gen/
+.external/
 *.o
 *.a
 *.so

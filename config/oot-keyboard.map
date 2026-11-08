@@ -1,0 +1,49 @@
+# Ocarina Linux keyboard map: conventional menu controls.
+player 1 keyboard on
+player 1 key A Return
+player 1 key B Escape
+player 1 key X X
+player 1 key Y Y
+player 1 key LS F
+player 1 key RS G
+player 1 key L Q
+player 1 key R E
+player 1 key ZL Z
+player 1 key ZR C
+player 1 key PLUS P
+player 1 key MINUS Tab
+player 1 key LEFT Left
+player 1 key UP Up
+player 1 key RIGHT Right
+player 1 key DOWN Down
+player 1 key SHAKE Space
+player 1 key LSTICK_UP Up
+player 1 key LSTICK_DOWN Down
+player 1 key LSTICK_LEFT Left
+player 1 key LSTICK_RIGHT Right
+
+player 1 controller any
+player 1 button A east
+player 1 button B south
+player 1 button X north
+player 1 button Y west
+player 1 button LS leftstick
+player 1 button RS rightstick
+player 1 button L leftshoulder
+player 1 button R rightshoulder
+player 1 button ZL +lefttrigger
+player 1 button ZR +righttrigger
+player 1 button PLUS start
+player 1 button MINUS back
+player 1 button LEFT dpleft
+player 1 button UP dpup
+player 1 button RIGHT dpright
+player 1 button DOWN dpdown
+player 1 button LSTICK_UP -lefty
+player 1 button LSTICK_DOWN +lefty
+player 1 button LSTICK_LEFT -leftx
+player 1 button LSTICK_RIGHT +leftx
+player 1 button RSTICK_UP -righty
+player 1 button RSTICK_DOWN +righty
+player 1 button RSTICK_LEFT -rightx
+player 1 button RSTICK_RIGHT +rightx

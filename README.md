@@ -1,175 +1,349 @@
-# ocarina-asahi-port
+# Ocarina of Time on Asahi Linux
 
-**One clone of this repository gets you the whole port.** It is the working repository
-for *The Legend of Zelda: Ocarina of Time* (Switch 2 release, title `0400486024DEC000`,
-update v131072) running natively on an **Apple M1 Pro under Asahi Linux on aarch64** —
-the game's own arm64 code, executed directly, with its NVN graphics commands replayed
-through Vulkan and Mesa's Honeykrisp driver.
+Experimental native Linux/aarch64 port of *The Legend of Zelda: Ocarina of
+Time* for Switch 2 (title `0400486024DEC000`, update `v131072`). The game's own
+arm64 code runs directly; NVN2 commands and shaders are translated to Vulkan
+for Mesa's Honeykrisp driver.
 
-```
+This is a research milestone, not a finished playable release. On the tested
+M1 Pro it boots through the logo, title/loading screens and save selection into
+live Kokiri Forest with audio, input, Link, Navi, terrain and HUD visible. The
+picture still has large dark/black occlusion, missing or incorrect geometry,
+wrong lighting/colour and heavy frame times. Area transitions can hang or run
+out of memory.
+
+## Known-good baseline
+
+| Item | Tested value |
+|---|---|
+| Machine | Apple M1 Pro, 10 CPU cores, G13S C0 GPU, 32 GiB unified memory |
+| OS | Fedora Asahi Remix 44, Linux aarch64, Wayland |
+| Kernel | `7.2.12-402.asahi.fc44.aarch64+16k` |
+| Game | title `0400486024DEC000`, update `v131072` |
+| Port | `port/` commit `35f233be` |
+| Driver | `mesa/` commit `3be2825e` |
+| Standard shader chain | `60f00ba3b166` |
+| Current performance | about 33–50 ms per rendered frame in the tested first scene |
+| Current memory | about 12–13 GiB for the game process; a 32 GiB host is strongly recommended |
+
+M2/M3/M4 Linux systems have not been validated. This is not a macOS build. A
+BC-250/AMD target is planned, but the current Honeykrisp software-mesh path is
+Apple-GPU-specific; BC-250 will need a separate RADV/AMD bring-up and its own
+validation.
+
+## Repository layout
+
+Clone all submodules:
+
+```sh
 git clone --recurse-submodules https://github.com/biosed/ocarina-asahi-port.git
 cd ocarina-asahi-port
 ```
 
-> **This repository and both of its submodule upstreams are private** (they were public
-> until 9 November 2026, and are now invite-only). You need collaborator access, and
-> `--recurse-submodules` needs credentials that can read the two submodules too —
-> `gh auth setup-git` with an invited account, or a token with `repo` scope.
+The repositories are currently private. The cloning account needs access to
+this repository and both submodules.
 
-That gives you two working trees and this guide:
-
-| path | what it is |
+| Path | Contents |
 |---|---|
-| `port/` | the port itself — the runtime, the renderer, the Linux platform layer (a submodule of [biosed/nxnative-asahi](https://github.com/biosed/nxnative-asahi), branch `asahi`) |
-| `mesa/` | the driver — the Honeykrisp G13 fork with the software `VK_EXT_mesh_shader` path (a submodule of [biosed/mesa-honeykrisp-mesh](https://github.com/biosed/mesa-honeykrisp-mesh), branch `g13-mesh-ext`) |
+| `port/` | merged Linux host, NVN/NVN2 replay, shader tools and title profile |
+| `mesa/` | Honeykrisp fork with the experimental G13 software task/mesh path |
+| `config/` | tested keyboard map and bounded guest-memory coherence profile |
+| `scripts/run-oot-asahi.sh` | repeatable launcher for already prepared game files |
 
-The decisions, audits and measurements behind all of this live in the companion
-[audit record](https://github.com/biosed/ocarina-asahi) — the `ACK-*.md` audits, the
-`reports/` write-ups and the `scripts/` analysers.
+No game-derived material is included: no NUP, executable modules, RomFS,
+shaders, saves, keys, screenshots or pipeline cache. Supply your own legally
+obtained game dump. The NUP used by this project is not encrypted, so this path
+uses no console keys or decryption step.
 
----
+## 1. Install dependencies
 
-## How to get where we are now
-
-### 1. Build — and do it without the game
-
-The renderer builds from the tracked game profile alone. **No game content is needed
-for this step**, which is the quickest way to confirm your toolchain works:
-
-```sh
-make -C port/dm/linux GAME=0400486024DEC000 null-renderer
-```
-
-That produces `port/dm/linux/gen/0400486024DEC000/libdm-renderer-null.a`, a
-relocatable renderer archive with the host/runtime integration seam left undefined.
-Nothing game-derived is involved.
-
-The device-free self-tests do not need a GPU or a game either:
+These Fedora 44 package names cover the host, driver, extraction, rewrite,
+translation and validation steps:
 
 ```sh
-make -C port/dm/linux GAME=0400486024DEC000 t_vk_mesh t_push t_skipcs t_gpstamp t_vk_stage
+sudo dnf install \
+  git make clang lld llvm pkgconf-pkg-config \
+  SDL3-devel vulkan-loader-devel vulkan-headers vulkan-tools libdav1d-devel \
+  python3 python3-capstone python3-zstandard \
+  dotnet-sdk-10.0 \
+  meson ninja-build gcc gcc-c++ \
+  python3-mako python3-pyyaml python3-packaging \
+  libdrm-devel wayland-devel glslang spirv-tools
 ```
 
-### 2. Supply the game yourself
-
-You need your own legally obtained copy of the game on the Switch 2. **This project
-contains no game content and never will** — no dump, no update, no keys, no RomFS, no
-extracted shaders, no imagery.
-
-The Switch 2 `.nup` container is **not encrypted**, so the port needs **no keys and no
-decryption tooling** — the container's own files are extracted directly:
+The NSO rewriter requires Capstone 5.x, not Capstone 6. Verify it:
 
 ```sh
-python3 port/scripts/pack_nup.py /path/to/your/title.nup
+python3 -c 'import capstone; assert capstone.cs_version()[0] == 5; print(capstone.__version__)'
+dotnet --list-sdks
+spirv-val --version
 ```
 
-That writes `<title ID>_build/extract/v<version>/ExeFS/` (the code modules) and the
-RomFS image, with every file checked against its SHA-256.
-
-### 3. Build the Vulkan renderer and the driver
+If the system Capstone is not version 5, create a virtual environment and use
+its Python for every Python command below:
 
 ```sh
-make -C port/dm/linux GAME=0400486024DEC000 nxasahi-renderer nxasahi-front
+python3 -m venv .venv
+.venv/bin/pip install 'capstone>=5,<6' 'backports.zstd; python_version < "3.14"'
 ```
 
-The driver is a separate tree (`mesa/`), because it is a fork of a different upstream
-(Mesa). Build it as you would build Mesa, and install it so its ICD is the one your
-runtime picks up — see `mesa/src/asahi/vulkan/` and the fork's own documentation. The
-runtime queries `VK_EXT_mesh_shader` on the device; the M1's G13 has no hardware mesh
-shaders, so the **software task/mesh path** in this fork is what carries NVN2's task
-and mesh programs.
+Python 3.14 already supplies `compression.zstd`; older Python versions need
+`backports.zstd` to read compressed NUP entries.
 
-### 4. Run it
+## 2. Build the Honeykrisp driver
+
+Build the checked-out driver in place. The options below are the ones used for
+the validated M1 Pro build:
 
 ```sh
-DM_WINDOW=1 ./port/dm/linux/gen/0400486024DEC000/oot-playable
+meson setup mesa/build-g13-mesh mesa \
+  -Dplatforms=wayland \
+  -Dvulkan-drivers=asahi \
+  -Dgallium-drivers= \
+  -Dbuild-tests=true \
+  -Dwerror=true \
+  -Dglx=disabled \
+  -Degl=disabled \
+  -Dgbm=disabled \
+  -Dllvm=enabled
+ninja -C mesa/build-g13-mesh
 ```
 
-`DM_WINDOW=1` opens the SDL3 window; without it the runtime runs headless.
+The development ICD is then:
 
----
+```text
+mesa/build-g13-mesh/src/asahi/vulkan/asahi_devenv_icd.aarch64.json
+```
 
-## Where we are now
+Confirm that it selects Honeykrisp rather than llvmpipe:
 
-**Status: 8 November 2026.** The game boots, plays its title and loading movies, loads
-a save, and renders playable Kokiri Forest with Link, Navi and the HUD at correct
-colours. Gameplay runs at roughly **50 ms a frame (GPU ~33 ms)** at the game's own
-**683×384** dynamic-resolution floor.
+```sh
+VK_DRIVER_FILES="$PWD/mesa/build-g13-mesh/src/asahi/vulkan/asahi_devenv_icd.aarch64.json" \
+  vulkaninfo --summary
+```
 
-**Open, and what each one needs:**
+The device name should be the Apple GPU and the driver name should be
+`Honeykrisp`.
 
-| item | where it stands |
+## 3. Build and test the Linux host
+
+The host build does not need game files:
+
+```sh
+make -j"$(nproc)" -C port/dm/linux GAME=0400486024DEC000 dmhost-vulkan
+```
+
+The executable is:
+
+```text
+port/dm/linux/gen/0400486024DEC000/dmhost-vulkan
+```
+
+Run the device-free integration tests:
+
+```sh
+make -C port/dm/linux GAME=0400486024DEC000 \
+  t_fs_linux t_vk_omap t_vk_mesh t_vk_shader_resolve \
+  t_vk_descriptor_pool t_push t_skipcs t_gpstamp t_vk_stage
+```
+
+## 4. Prepare your own NUP
+
+Allow at least 70 GiB free while retaining the original NUP. The tested NUP is
+25.6 GiB and its current derived build directory is about 34 GiB: 25 GiB of
+extraction, 102 MiB of rewritten modules and roughly 9 GiB of shader outputs
+and caches.
+
+Set two paths for the remaining commands:
+
+```sh
+OOT_NUP=/absolute/path/to/your/game.nup
+OOT_BUILD=/absolute/path/to/0400486024DEC000_build
+```
+
+### Extract
+
+```sh
+python3 port/scripts/pack_nup.py "$OOT_NUP" --work-dir "$OOT_BUILD"
+```
+
+Expected inputs after extraction:
+
+```text
+$OOT_BUILD/extract/v131072/ExeFS/main
+$OOT_BUILD/extract/v131072/ExeFS/subsdk0
+$OOT_BUILD/extract/v131072/ExeFS/sdk
+$OOT_BUILD/extract/v131072/RomFS.img
+```
+
+Stop if the selected version is not `v131072`; the tracked profile and tested
+module layout are for that update.
+
+### Rewrite the three arm64 modules for Linux
+
+```sh
+mkdir -p "$OOT_BUILD/patched_linux_v131072"
+for OOT_MODULE in main subsdk0 sdk; do
+  DM_PATCH_TP=linux DM_GAME=0400486024DEC000 \
+    python3 port/dm/tools/patch_nso.py \
+      "$OOT_BUILD/extract/v131072/ExeFS/$OOT_MODULE" \
+      "$OOT_BUILD/patched_linux_v131072" \
+      "$OOT_MODULE"
+done
+```
+
+The launcher expects `main.patched.bin`, `subsdk0.patched.bin` and
+`sdk.patched.bin` in that directory. Rewriting can use several GiB of RAM.
+
+### Extract the NVN2 shader package
+
+This scans the 25 GiB RomFS image and can take a while:
+
+```sh
+mkdir -p "$OOT_BUILD/shaders/pkg"
+DM_GAME=0400486024DEC000 J="$(nproc)" \
+  python3 port/dm/gfx/tools/shader_split.py \
+    "$OOT_BUILD/extract/v131072/RomFS.img" \
+    "$OOT_BUILD/extract/v131072/ExeFS/main" \
+    "$OOT_BUILD/shaders/pkg" \
+    "$OOT_BUILD/shaders/shader_map.tsv" \
+    "$OOT_BUILD/shaders/shader_facts.tsv" \
+    "$OOT_BUILD/shaders/shader_pairs.tsv" \
+    "$OOT_BUILD/shaders/pso_pairs.tsv"
+```
+
+For this update the final summary should report 42,848 shaders: 4,125 compute,
+500 mesh, 22,352 pixel, 20 task and 15,851 vertex.
+
+### Build the separately licensed native task/mesh translator
+
+Ordinary vertex/pixel/compute translation is in `port/`. The current game also
+needs native Vulkan TaskEXT/MeshEXT modules. Their validated translator is a
+GPL-3.0-or-later combined work from BananaNative commit `96cc0e88`; it is kept
+outside this MIT port deliberately.
+
+```sh
+DONOR_DIR="$PWD/.external/BananaNative"
+git clone https://github.com/moceure/BananaNative.git "$DONOR_DIR"
+git -C "$DONOR_DIR" checkout 96cc0e883c80117e51342c60facfae2f0e600b9a
+dotnet publish \
+  "$DONOR_DIR/dm/gfx/tools/dmsh_xlate/dmsh_xlate.csproj" \
+  -c Release -r linux-arm64 --self-contained false \
+  -o "$DONOR_DIR/build/dmsh-xlate"
+dotnet "$DONOR_DIR/build/dmsh-xlate/dmsh_xlate.dll" --source-sha
+```
+
+The last command must print `0f31637014ce4725`. The port rejects any other
+source digest instead of silently accepting an incompatible translator.
+
+### Translate shaders to Vulkan SPIR-V
+
+```sh
+DM_GAME=0400486024DEC000 \
+DMSH_VK_MESH_XLATE="$DONOR_DIR/build/dmsh-xlate/dmsh_xlate.dll" \
+DMSH_VK_MESH_MAP="$OOT_BUILD/shaders/shader_map.tsv" \
+DMSH_VK_MESH_FACTS="$OOT_BUILD/shaders/shader_facts.tsv" \
+DMSH_VK_MESH_ALLOW_FAILURES=1 \
+SPIRV_VAL="$(command -v spirv-val)" \
+J="$(nproc)" \
+  python3 port/dm/gfx/tools/dmsh_spv.py \
+    "$OOT_BUILD/shaders/pkg" \
+    "$OOT_BUILD/shaders/vulkan"
+```
+
+This is the longest CPU stage when translating the full title. It validates
+each native task/mesh output for Vulkan 1.3 and writes the usable modules under:
+
+```text
+$OOT_BUILD/shaders/vulkan/spv-60f00ba3b166/
+```
+
+Some title shaders are still unsupported. `DMSH_VK_MESH_ALLOW_FAILURES=1`
+retains validated successes and records exact failures; it does not weaken
+validation. Do not copy shader output from another game version.
+
+## 5. Run the current baseline
+
+Create writable runtime directories:
+
+```sh
+mkdir -p "$OOT_BUILD/runtime/save" "$OOT_BUILD/runtime/temp"
+```
+
+Launch under a memory guard. Passing the same SPIR-V directory twice is
+intentional when the standard and native task/mesh modules came from the
+combined command above:
+
+```sh
+OOT_SPV="$OOT_BUILD/shaders/vulkan/spv-60f00ba3b166"
+systemd-run --user --scope --collect \
+  -p MemoryHigh=12G \
+  -p MemoryMax=15G \
+  -p MemorySwapMax=2G \
+  ./scripts/run-oot-asahi.sh "$OOT_BUILD" "$OOT_SPV" "$OOT_SPV"
+```
+
+If standard and native mesh shaders were prepared into separate directories,
+pass the native mesh directory as the third argument instead.
+
+Controls in the supplied map:
+
+| Input | Key |
 |---|---|
-| **The gameplay stand-in** | The game's own gameplay upscaler produces nothing on this path and the stand-in covers only the movie path, so a visible Kokiri run still needs the fallback to the bound `raw_9e5` source. This is the one item blocking gameplay visibility. |
-| **The resolution floor** | The game's GPU-time dynamic-resolution controller holds the 3D at 683×384. All three peer ports of this same build lift it by patching the game's own module; the patch is prepared but deliberately **off** — it is not the right trade at the current per-frame cost. |
-| **The `gp_run()` timestamp guard** | The component (`vk_gpstamp.h`) and its unit test are in the tree and the test passes; the call site in `vk_replay.c` is not yet applied, so the run-level behaviour is unproven. |
-| **Untranslated shaders** | A few dozen remain; translation runs in the background. |
-| **The meshlet cap** | The software mesh path emits a single meshlet group; the tunic cutouts want more. |
-| **The host memory guard** | The run is pinned under a cgroup cap; the footprint sits at the guard and throttles. |
+| A / confirm | Return |
+| B / back | Escape |
+| Left stick and menu directions | Arrow keys |
+| L / R | Q / E |
+| ZL / ZR | Z / C |
+| Plus / Minus | P / Tab |
 
-**The three component branches.** The port was grown as three branches of one tree and
-this repository tracks their merge:
+SDL gamepads are also mapped and are preferable for gameplay.
 
-| branch | what it holds |
-|---|---|
-| `asahi-renderer` | the Linux Vulkan replay, the NVN command-record format, the mesh/task ABI headers, the `dmsh_spv` translator tools |
-| `asahi-runtime` | the Linux host port — filesystem, audio, video codec, threads, SVC — the NSO tools |
-| `asahi-linux` | the Android and Linux platform layers, the host thread-slot plumbing |
-| `asahi` | **the merge of the three** — what this repository's `port/` submodule points at |
+The launcher enables the exact experimental G13 mesh proof, the learned
+guest-memory coherence profile and the bounded compute-skip list used in the
+latest test. The skip list deliberately omits unsafe compute effects and is one
+reason this is not a correctness baseline. Override an environment variable
+before launching only when testing a specific change.
 
-> **The `asahi` branch is the merge of the three, and it is build-verified.** On
-> 8 November 2026 the merged tree compiled clean under `-Wall -Wextra -Werror` — the
-> null renderer, the Vulkan renderer objects, the SDL front end and the Vulkan
-> self-test all built, and the five device-free self-tests passed (`t_vk_mesh`,
-> `t_push`, `t_skipcs`, `t_gpstamp`, `t_vk_stage`, each "passed (0 failures)").
-> What is *not* verified is a full game run from the merged tree: that needs the
-> game and a GPU, and it is the owner's to run. The three component branches stay
-> published and known-good in their own right.
->
-> **The merged pointer does not yet build the game.** The merged `dm/linux/Makefile`
-> carries the renderer's bring-up targets only — there is no `dmhost` target — and
-> because the merge resolved conflicts file by file across three branches that are
-> whole-architecture alternatives, it also breaks the Apple and Android host builds
-> and the Linux game build (three defects, all reproduced). That is being repaired at
-> *directory* granularity — the branch is the coherent unit, not the file — and this
-> repository's `port/` pointer moves when it lands. Until then, the component
-> branches build and run the game; the merged branch builds the renderer and its
-> self-tests.
->
-> **One design question is still open in the merge.** The guest thread-slot mechanism
-> exists in two forms, and they are closer than they first look: the runtime branch's
-> `pthread_key_t` form and the Linux branch's `dm_thread_slot_t` form. **Both publish
-> a `tpidr_el0`-relative offset into the guest's key page**, so the guest reads the
-> slots from `tpidr_el0` the way the console does either way. They differ only in
-> *where the four values are stored* and *how the offset is obtained* — glibc's
-> thread-local array, located by a start-up probe that writes a marker and searches
-> for it, versus a host TLS array whose offset is computed arithmetically. The merge
-> keeps the runtime's form, which is the one the game-running Linux tree used, and the
-> Linux branch's form has never had a game run in it. Whether to swap in the
-> deterministic host array — which would remove the probe's dependence on glibc
-> internals — is a call for the owner.
+## Expected problems
 
----
+- **Audio but a black/dark picture:** first confirm the selected ICD says
+  Honeykrisp, the shader chain is `60f00ba3b166`, and the log says mesh shading
+  is on. A large dark occlusion in Kokiri Forest is still a known renderer bug.
+- **Logo/title works, gameplay is missing geometry:** the native task/mesh
+  translator or `DMSH_VK_MESH_EXT_DIR` is missing, stale or from the wrong
+  profile.
+- **`ModuleNotFoundError: capstone`:** install `python3-capstone` or use the
+  Capstone-5 virtual environment described above.
+- **`glslangValidator` missing during Meson setup:** install Fedora's
+  `glslang` package.
+- **The desktop becomes unresponsive:** stop the scope, close memory-heavy
+  applications and let swap drain before retrying. Do not remove the cgroup
+  guard on a busy system.
+- **First-area stalls:** shader-object compilation and the current software
+  mesh path are expensive. A cache helps later starts but does not make the
+  current renderer correct or fast.
 
-## Working on it
+## What is complete and what is not
 
-- **Port changes** go in `port/` — the runtime, renderer and platform layer. Build it
-  with `make -C port/dm/linux GAME=0400486024DEC000 …`.
-- **Driver changes** go in `mesa/` — the Honeykrisp G13 fork and its software
-  task/mesh path.
-- Push branches to the two submodule upstreams (`biosed/nxnative-asahi`,
-  `biosed/mesa-honeykrisp-mesh`), then bump the submodule pointer here.
+The merged `asahi` port builds a complete Linux Vulkan host from one tree. Its
+filesystem, audio/video, thread-slot and renderer self-tests pass, and the
+exact merged executable has reached live Kokiri gameplay on the M1 Pro. The
+fragment output-map and partial-colour-target depth fixes are included; all 40
+affected depth shaders validated, but that correction did not remove the
+remaining dark scene occlusion.
 
-Both submodules carry the upstream's MIT licence (see `NOTICE` in the audit record
-for the full attributions). The native mesh translator is a **separate, GPL-3.0
-component that is deliberately kept outside the MIT tree** — see
-`port/dm/linux/README.md` for why, and for the `DMSH_VK_MESH_XLATE` route that uses it.
+Still open: render-target/coherence correctness, missing geometry, lighting
+and colour, meshlet coverage, dynamic-resolution cost, pipeline stalls, memory
+growth and later-area stability. “It boots” is established; “it is comfortably
+playable” is not.
 
-## Licence and conduct
+## Licences
 
-This project is independent and unaffiliated. It is not endorsed by, licensed by, or
-connected to Nintendo, the game's developers, Mesa, or the Asahi Linux project.
+The port submodule retains its MIT licence and upstream notices. Mesa retains
+its own licences. The external native task/mesh translator pinned above is a
+GPL-3.0-or-later combined work and must remain separately sourced and licensed.
+No licence in this project grants rights to game content.
 
-You must supply the game yourself. Nothing here reproduces Nintendo game content, and
-nothing here circumvents any access control — the Switch 2 container this port reads
-is not encrypted, so no keys are involved at any point.
+This project is independent and unaffiliated with Nintendo, the game's
+developers, Mesa or the Asahi Linux project.

@@ -4,5 +4,5 @@
 	branch = asahi
 [submodule "mesa"]
 	path = mesa
-	url = https://github.com/biosed/mesa-honeykrisp-mesh.git
+	url = https://github.com/biosed/mesa-honeykrisp.git
 	branch = g13-mesh-ext
