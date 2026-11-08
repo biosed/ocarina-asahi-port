@@ -11,6 +11,11 @@ git clone --recurse-submodules https://github.com/biosed/ocarina-asahi-port.git
 cd ocarina-asahi-port
 ```
 
+> **This repository and both of its submodule upstreams are private** (they were public
+> until 9 November 2026, and are now invite-only). You need collaborator access, and
+> `--recurse-submodules` needs credentials that can read the two submodules too —
+> `gh auth setup-git` with an invited account, or a token with `repo` scope.
+
 That gives you two working trees and this guide:
 
 | path | what it is |
@@ -121,13 +126,28 @@ this repository tracks their merge:
 > game and a GPU, and it is the owner's to run. The three component branches stay
 > published and known-good in their own right.
 >
-> **One design question is still open in the merge.** The guest thread-slot
-> mechanism exists in two forms: the runtime branch's `pthread_key_t` form and the
-> Linux branch's console-accurate `dm_thread_slot_t` form, which reads the slots
-> from `tpidr_el0` the way the console does. The merge keeps the former, which
-> compiles and passes its tests; whether it should become the latter is a call for
-> the owner, since it touches the loader, the thread layer and the header's
-> declaration of the four slot keys together.
+> **The merged pointer does not yet build the game.** The merged `dm/linux/Makefile`
+> carries the renderer's bring-up targets only — there is no `dmhost` target — and
+> because the merge resolved conflicts file by file across three branches that are
+> whole-architecture alternatives, it also breaks the Apple and Android host builds
+> and the Linux game build (three defects, all reproduced). That is being repaired at
+> *directory* granularity — the branch is the coherent unit, not the file — and this
+> repository's `port/` pointer moves when it lands. Until then, the component
+> branches build and run the game; the merged branch builds the renderer and its
+> self-tests.
+>
+> **One design question is still open in the merge.** The guest thread-slot mechanism
+> exists in two forms, and they are closer than they first look: the runtime branch's
+> `pthread_key_t` form and the Linux branch's `dm_thread_slot_t` form. **Both publish
+> a `tpidr_el0`-relative offset into the guest's key page**, so the guest reads the
+> slots from `tpidr_el0` the way the console does either way. They differ only in
+> *where the four values are stored* and *how the offset is obtained* — glibc's
+> thread-local array, located by a start-up probe that writes a marker and searches
+> for it, versus a host TLS array whose offset is computed arithmetically. The merge
+> keeps the runtime's form, which is the one the game-running Linux tree used, and the
+> Linux branch's form has never had a game run in it. Whether to swap in the
+> deterministic host array — which would remove the probe's dependence on glibc
+> internals — is a call for the owner.
 
 ---
 
