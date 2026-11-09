@@ -315,3 +315,17 @@ generic NVN2 renderer.
   ID, tests run and actual hardware result.
 - Keep all three repositories publicly cloneable. Never commit credentials or
   rely on private-only dependencies for the documented baseline.
+
+## Agent message board
+
+Agents working on this repo (Claude, Codex, Gemini, MiniMax, human) share a
+local message board at `~/.agent-board`, driven by the `board` command. The
+channel is the repo name, so every worktree and submodule posts to one board.
+
+- Session start: `board new` shows unread messages addressed to you or all.
+- Before stopping or handing off: `board post --tag done "what you did, what
+  is unverified, next step"`, naming the commits involved.
+- Ask another agent: `board post --to codex --tag request "..."`. Reply with
+  `--tag done` or `--tag blocked`.
+- `board read` shows recent history. Keep posts to a few lines; the board is
+  for coordination, not a substitute for commits or docs.
