@@ -73,10 +73,10 @@ mkdir -p "$OOT_SAVE" "$OOT_TEMP" "$OOT_CACHE"
 : "${DM_CODEC_ACQUIRE_RESERVES:=1}"
 : "${DM_CODEC_MOVIE_B2T_LATEST:=1}"
 
-# Exact bounded workaround used by the latest M1 Pro visual run. These compute
-# programs are skipped deliberately; unset DM_VK_SKIP_CS only for a controlled
-# renderer test, not as an assumed improvement.
-: "${DM_VK_SKIP_CS:=d15370a382630d4e,e6be82d835fbe4d3,9442573ee4ace011,0a56002cdc7e1fce,a8b4fb48fee0ccf8,ba079f68ae288dba,e2eebd7ba18fe35f,7f7ff0f36b54d90f,5a7d69b067a7f011,4f41ccf24f163e0d,f8965bffbdf51d78,d17eefaff4f0bc23,a335c1db6270c355,fa3033d05c0a41d6,d99fbeeb53d38847}"
+# Run the translated NDVE/NDSR chain by default. DM_VK_SKIP_CS remains an
+# explicit exact-key diagnostic; setting it deliberately makes the rendered
+# chain incomplete and never substitutes another image operation.
+: "${DM_VK_SKIP_CS:=}"
 
 export \
     VK_DRIVER_FILES NIR_DEBUG ASAHI_G13_SOFTWARE_MESH \
