@@ -8,9 +8,9 @@ for Mesa's Honeykrisp driver.
 This is a research milestone, not a finished playable release. On the tested
 M1 Pro it boots through the logo, title/loading screens and save selection into
 live Kokiri Forest with audio, input, Link, Navi, terrain and HUD visible. The
-picture still has large dark/black occlusion, missing or incorrect geometry,
-wrong lighting/colour and heavy frame times. Area transitions can hang or run
-out of memory.
+tested outdoor save is correctly lit, but frame times remain heavy. The full
+canonical mesh set still reclaim-livelocks above the 12 GiB soft limit during
+the Kokiri load; later area transitions remain unvalidated.
 
 ## Known-good baseline
 
@@ -20,11 +20,11 @@ out of memory.
 | OS | Fedora Asahi Remix 44, Linux aarch64, Wayland |
 | Kernel | `7.2.12-402.asahi.fc44.aarch64+16k` |
 | Game | title `0400486024DEC000`, update `v131072` |
-| Port | `port/` commit `35f233be` |
-| Driver | `mesa/` commit `3be2825e` |
-| Standard shader chain | `60f00ba3b166` |
-| Current performance | about 33–50 ms per rendered frame in the tested first scene |
-| Current memory | about 12–13 GiB for the game process; a 32 GiB host is strongly recommended |
+| Port | `port/` commit `09d20d39` |
+| Driver | `mesa/` commit `71ce0ae7bd6` |
+| Standard shader chain | `dd86b6066f89` |
+| Current performance | Kokiri outdoor snapshot route: 86 ms/frame p50, about 63 ms GPU |
+| Current memory | full mesh set plateaus at 12.6 GiB and stalls under the 12 GiB soft limit; a 32 GiB host is strongly recommended |
 
 M2/M3/M4 Linux systems have not been validated. This is not a macOS build. A
 BC-250/AMD target is planned, but the current Honeykrisp software-mesh path is
@@ -299,17 +299,23 @@ Controls in the supplied map:
 
 SDL gamepads are also mapped and are preferable for gameplay.
 
-The launcher enables the exact experimental G13 mesh proof, the learned
-guest-memory coherence profile and the bounded compute-skip list used in the
-latest test. The skip list deliberately omits unsafe compute effects and is one
-reason this is not a correctness baseline. Override an environment variable
-before launching only when testing a specific change.
+The launcher enables the exact experimental G13 mesh proof and the learned
+guest-memory coherence profile. It explicitly zeroes closed pages in placed
+guest-memory chunks. `DM_VK_GMEM_DEMAND_ZERO=1` remains diagnostic-only: its
+`PROT_NONE` fault-on-demand experiment cannot service kernel accesses to closed
+guest pages, which corrupts the title's allocator state and aborts startup. It
+does not skip arbitrary compute shaders.
+On the M1 Pro baseline it defaults `DM_MOVIE_ENHANCE=0`: the movie library's
+expensive clean-up network is replaced by a checked copy of the decoded frame,
+while colour conversion and scaling still run. Set `DM_MOVIE_ENHANCE=1` to run
+the full network. The generic runtime keeps enhancement on unless this switch
+is explicitly set.
 
 ## Expected problems
 
 - **Audio but a black/dark picture:** first confirm the selected ICD says
-  Honeykrisp, the shader chain is `60f00ba3b166`, and the log says mesh shading
-  is on. A large dark occlusion in Kokiri Forest is still a known renderer bug.
+  Honeykrisp, the shader directories use the expected current chain, and the
+  log says mesh shading is on.
 - **Logo/title works, gameplay is missing geometry:** the native task/mesh
   translator or `DMSH_VK_MESH_EXT_DIR` is missing, stale or from the wrong
   profile.
@@ -329,14 +335,13 @@ before launching only when testing a specific change.
 The merged `asahi` port builds a complete Linux Vulkan host from one tree. Its
 filesystem, audio/video, thread-slot and renderer self-tests pass, and the
 exact merged executable has reached live Kokiri gameplay on the M1 Pro. The
-fragment output-map and partial-colour-target depth fixes are included; all 40
-affected depth shaders validated, but that correction did not remove the
-remaining dark scene occlusion.
+fragment output-map and partial-colour-target depth fixes are included, and all
+40 affected depth shaders validated.
 
-Still open: render-target/coherence correctness, missing geometry, lighting
-and colour, meshlet coverage, dynamic-resolution cost, pipeline stalls, memory
-growth and later-area stability. “It boots” is established; “it is comfortably
-playable” is not.
+Still open: render-target/coherence edge cases, missing geometry, meshlet
+coverage, dynamic-resolution cost, pipeline stalls, the full-set memory
+plateau and later-area stability. “It boots” and renders the tested outdoor
+save; “it is comfortably playable” is not.
 
 ## Broader direction
 
