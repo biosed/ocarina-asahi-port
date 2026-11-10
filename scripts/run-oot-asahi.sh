@@ -63,7 +63,12 @@ mkdir -p "$OOT_SAVE" "$OOT_TEMP" "$OOT_CACHE"
 : "${DM_VK_BINDLESS_IMAGE_MB:=512}"
 : "${DM_VK_BINDLESS_IMAGE_MAX_MB:=128}"
 : "${DM_VK_BINDLESS_FEEDBACK:=0}"
-: "${DM_VK_CB_RING:=2}"
+# The replay records ahead of the GPU through a ring of command buffers, and a
+# frame is about 14 of them. A ring of 2 made every part wait for an earlier
+# part of the same frame: outdoors in Kokiri Forest 83.5 ms a frame; 8 gave
+# 64.2 ms and 16 gives 58.5 ms, all at the same 12.3 GiB memory peak
+# (2026-11-10, M1 Pro; mesa 71ce0ae7 pools the mesh scratch).
+: "${DM_VK_CB_RING:=16}"
 : "${DM_VK_ROBUST:=1}"
 : "${DM_VK_PRECOMPILE:=0}"
 : "${DM_VK_GPU_HEARTBEAT:=1}"
