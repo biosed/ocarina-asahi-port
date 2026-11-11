@@ -23,7 +23,7 @@ OOT_ICD_DEFAULT="$OOT_REPO_ROOT/mesa/build-g13-mesh/src/asahi/vulkan/asahi_deven
 OOT_MODULES="$OOT_BUILD_DIR/patched_linux_$OOT_VERSION"
 OOT_ROMFS="$OOT_BUILD_DIR/extract/$OOT_VERSION/RomFS.img"
 OOT_SHADER_MAP="$OOT_BUILD_DIR/shaders/shader_map.tsv"
-OOT_SAVE="$OOT_BUILD_DIR/runtime/save"
+OOT_SAVE="${DM_SAVE:-$OOT_BUILD_DIR/runtime/save}"
 OOT_TEMP="$OOT_BUILD_DIR/runtime/temp"
 OOT_CACHE="$OOT_BUILD_DIR/runtime/vkcache-g13"
 
