@@ -23,7 +23,7 @@ the Kokiri load; later area transitions remain unvalidated.
 | Port | `port/` commit `6f6de38ff28d` |
 | Driver | `mesa/` commit `059a6139be70` |
 | Standard shader chain | `8b975cd27f6e` |
-| Current performance | title and the first 85 seconds of the New Game WebM: 16.66 ms/frame and about 11.0--11.2 ms GPU; outdoor Kokiri frozen save before the bit-47 driver: 44.2/38.5 ms at tier 0 and 38.7/34.6 ms at `DM_GFX_SCALE=1` |
+| Current performance | title and the first 85 seconds of the New Game WebM: 16.66 ms/frame and about 11.0--11.2 ms GPU; outdoor Kokiri frozen save on the exact pinned pair: 40.7/37.2 ms at tier 0 and 38.3/35.0 ms at `DM_GFX_SCALE=1` |
 | Current memory | story-movie route: 9.75 GB cgroup peak with no swap or limit event; later in-engine opening: 12.89 GB peak and 100 MB swap under the 12/15/2 GB limits; a 32 GiB host is strongly recommended |
 
 These revisions collect two separately validated milestones. The port propagates
@@ -43,6 +43,13 @@ swap. The later in-engine scene remained about 30--35 ms per frame. This proves
 title and sustained story video, input and opening presentation on the pinned
 pair, not all eight minutes of the story movie, movement, an area transition or
 smooth gameplay.
+
+Matched 300-second frozen-save arms on the same host, driver, shader sets and
+scripted route measured 40.73 ms/frame and 37.19 ms GPU at the default tier 0,
+and 38.30/35.02 ms at tier 1. Both used the compact compute timers only after
+frame 6,000, produced zero audio underruns, stayed below 11.21 GB without swap,
+and had no kernel GPU timeout. Tier 1 is therefore only a modest performance
+option, not a route to 60 fps; gameplay remains GPU-bound and not yet smooth.
 
 M2/M3/M4 Linux systems have not been validated. This is not a macOS build. A
 BC-250/AMD target is planned, but the current Honeykrisp software-mesh path is
