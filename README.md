@@ -23,8 +23,8 @@ the Kokiri load; later area transitions remain unvalidated.
 | Port | `port/` commit `6f6de38ff28d` |
 | Driver | `mesa/` commit `059a6139be70` |
 | Standard shader chain | `8b975cd27f6e` |
-| Current performance | title movie on the pinned pair: 16.66 ms/frame and about 11.8 ms GPU; outdoor Kokiri frozen save before the bit-47 driver: 44.2/38.5 ms at the default tier 0 and 38.7/34.6 ms at `DM_GFX_SCALE=1` |
-| Current memory | guarded 150-second title/opening route: 12.89 GB cgroup peak and 100 MB swap under the 12/15/2 GB limits, with no max or OOM event; a 32 GiB host is strongly recommended |
+| Current performance | title and the first 85 seconds of the New Game WebM: 16.66 ms/frame and about 11.0--11.2 ms GPU; outdoor Kokiri frozen save before the bit-47 driver: 44.2/38.5 ms at tier 0 and 38.7/34.6 ms at `DM_GFX_SCALE=1` |
+| Current memory | story-movie route: 9.75 GB cgroup peak with no swap or limit event; later in-engine opening: 12.89 GB peak and 100 MB swap under the 12/15/2 GB limits; a 32 GiB host is strongly recommended |
 
 These revisions collect two separately validated milestones. The port propagates
 the direct draw base instance into translated shader state, restoring split
@@ -32,15 +32,17 @@ dialogue glyph batches in a guarded matched-chain A/B. The driver enables the
 validated G13 local load/store control bit by default; its full Asahi suite
 passes 122/122.
 
-The exact combined revisions completed a guarded 150-second title/opening
-route. The 2560x1440 title background movie visibly advanced between captures,
-the menu text and button label rendered, both scripted A presses landed, and
-the later in-engine opening rendered subtitles. The title held a 16.66 ms frame
-median with about 11.8 ms GPU and audio reported no underruns. The launcher's
-default `DM_MOVIES=opening` deliberately skipped the separate eight-minute New
-Game WebM, and the later scene remained about 30--35 ms per frame. This proves
-title video, input and opening presentation on the pinned pair, not the full
-story movie, movement, an area transition or smooth gameplay.
+The exact combined revisions completed guarded title and opening routes. The
+2560x1440 title background movie visibly advanced between captures, the menu
+text and button label rendered, both scripted A presses landed, and the later
+in-engine opening rendered subtitles. A second 130-second route enabled every
+movie and played the first 85 seconds of the separate New Game WebM, from its
+tapestry sequence through Link asleep. Its frame median stayed at 16.66 ms with
+about 11.0--11.2 ms GPU, audio reported no underruns, and the cgroup used no
+swap. The later in-engine scene remained about 30--35 ms per frame. This proves
+title and sustained story video, input and opening presentation on the pinned
+pair, not all eight minutes of the story movie, movement, an area transition or
+smooth gameplay.
 
 M2/M3/M4 Linux systems have not been validated. This is not a macOS build. A
 BC-250/AMD target is planned, but the current Honeykrisp software-mesh path is
@@ -330,6 +332,9 @@ expensive clean-up network is replaced by a checked copy of the decoded frame,
 while colour conversion and scaling still run. Set `DM_MOVIE_ENHANCE=1` to run
 the full network. The generic runtime keeps enhancement on unless this switch
 is explicitly set.
+Movies themselves default to `DM_MOVIES=all`. Set `DM_MOVIES=opening` only for
+a short development route that retains the title movies but hides the
+eight-minute New Game WebM, or `DM_MOVIES=off` to hide every WebM.
 
 ## Expected problems
 
