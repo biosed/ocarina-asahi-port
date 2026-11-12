@@ -115,7 +115,7 @@ sudo dnf install \
   dotnet-sdk-10.0 \
   meson ninja-build gcc gcc-c++ \
   python3-mako python3-pyyaml python3-packaging \
-  libdrm-devel wayland-devel glslang glslc spirv-tools
+  libdrm-devel wayland-devel glslang glslc spirv-tools mangohud
 ```
 
 The NSO rewriter requires Capstone 5.x, not Capstone 6. Verify it:
@@ -344,8 +344,9 @@ accepts 0 through 8). `DM_UPSCALER=linear` saved about 4.5 ms/frame but is
 visibly softer. The default `game` preserves the title's network; `probe`
 preserves it while logging stage shapes and formats.
 
-Set `DM_HUD=1` to enable a compact MangoHud FPS, frametime, GPU-name and
-Vulkan-driver overlay; Right Shift+F12 toggles it. MangoHud cannot currently
+The launcher enables a compact MangoHud FPS, frametime, GPU-name and
+Vulkan-driver overlay by default; Right Shift+F12 toggles it and `DM_HUD=0`
+disables it for captures or controlled measurements. MangoHud cannot currently
 sample Asahi GPU utilisation, so this launcher does not display a fake load.
 
 If standard and native mesh shaders were prepared into separate directories,
