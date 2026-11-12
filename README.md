@@ -343,13 +343,16 @@ applies on the next launch. The launcher reads those saved choices from
 `DM_SETTINGS`) without evaluating it as shell code. An explicitly supplied
 `DM_GFX_SCALE` or `DM_UPSCALER` overrides the corresponding saved choice.
 
-Set `DM_UPSCALER=fsr1` to replace the game's expensive NDSR reconstruction
+`DM_UPSCALER=fsr1` replaces the game's expensive NDSR reconstruction
 stage with source-built AMD FSR 1 EASU and RCAS. It saved about 3.6 ms/frame in
 the matched tier-1 outdoor route while keeping detail close to the network;
 `DM_UPSCALER_SHARPNESS=0.25` is the tested RCAS reduction in stops (the port
 accepts 0 through 8). `DM_UPSCALER=linear` saved about 4.5 ms/frame but is
-visibly softer. The default `game` preserves the title's network; `probe`
-preserves it while logging stage shapes and formats.
+visibly softer. FSR 1 is the launcher default (chosen by the player after an
+in-game comparison; on the exact frame route at tier 1 it measured 35.52/32.12
+ms frame/GPU against 38.36/34.91 for the network). `DM_UPSCALER=game` (or the F1
+menu) keeps the title's network; `probe` preserves it while logging stage
+shapes and formats.
 
 The launcher enables a compact MangoHud FPS, frametime, GPU-name and
 Vulkan-driver overlay by default; Right Shift+F12 toggles it and `DM_HUD=0`
