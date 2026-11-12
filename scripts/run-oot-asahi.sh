@@ -129,10 +129,13 @@ fi
 # answers tier 1 (outdoor Kokiri, frozen save, port 6f6de38 + Mesa 059a613, 2026-11-12: tier 0
 # 40.7 ms/frame and 37.2 ms GPU, tier 1 38.3 / 35.0). Set DM_GFX_SCALE=0 for the full-size picture.
 : "${DM_GFX_SCALE:=1}"
-# Preserve the game's NDSR network unless the player explicitly chooses FSR 1
-# (near-network detail) or the slightly faster, visibly softer bilinear scaler.
-# probe logs stages but preserves the network (port vk_upscaler.h).
-: "${DM_UPSCALER:=game}"
+# FSR 1 (EASU + RCAS, port vk_upscaler.h) replaces the game's NDSR reconstruction
+# by default: the player chose it after comparing the scalers in game (2026-11-12),
+# and on the M1 Pro it is ~2.8 ms GPU a frame cheaper at tier 1 (exact frame route,
+# Mesa c29de1bf: game 38.36/34.91, fsr1 35.52/32.12 ms frame/GPU). game keeps the
+# network, linear is fastest but softer, probe logs stages; DM_UPSCALER or the
+# in-game menu's saved choice overrides this.
+: "${DM_UPSCALER:=fsr1}"
 : "${DM_UPSCALER_SHARPNESS:=0.25}"
 
 case "$DM_GFX_SCALE" in
