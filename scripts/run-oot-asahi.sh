@@ -89,6 +89,18 @@ mkdir -p "$OOT_SAVE" "$OOT_TEMP" "$OOT_CACHE"
 # answers tier 1 (outdoor Kokiri, frozen save, port 6f6de38 + Mesa 059a613, 2026-11-12: tier 0
 # 40.7 ms/frame and 37.2 ms GPU, tier 1 38.3 / 35.0). Set DM_GFX_SCALE=0 for the full-size picture.
 : "${DM_GFX_SCALE:=1}"
+# Preserve the game's NDSR network unless the player explicitly chooses the
+# faster, visibly softer bilinear replacement. probe logs stages but preserves
+# the network (port vk_upscaler.h).
+: "${DM_UPSCALER:=game}"
+
+case "$DM_UPSCALER" in
+    game|linear|probe) ;;
+    *)
+        echo "error: DM_UPSCALER must be game, linear or probe (got: $DM_UPSCALER)" >&2
+        exit 2
+        ;;
+esac
 
 case "$DM_HUD" in
     0)
@@ -126,7 +138,8 @@ export \
     DM_VK_BINDLESS_FEEDBACK DM_VK_CB_RING DM_VK_ROBUST \
     DM_VK_PRECOMPILE DM_VK_GPU_HEARTBEAT DM_VK_OPS DM_VK_MESH_LOG \
     DM_VK_SHADER_COMPILE_LOG DM_WINDOW DM_AUDIO DM_FOCUS_KEEP DM_MOVIES DM_MOVIE_ENHANCE \
-    DM_CODEC_ACQUIRE_RESERVES DM_CODEC_MOVIE_B2T_LATEST DM_VK_SKIP_CS DM_GFX_SCALE
+    DM_CODEC_ACQUIRE_RESERVES DM_CODEC_MOVIE_B2T_LATEST DM_VK_SKIP_CS DM_GFX_SCALE \
+    DM_UPSCALER
 
 export DM_ROOT="$OOT_BUILD_DIR"
 export DM_ROMFS="$OOT_ROMFS"
@@ -148,5 +161,6 @@ echo "native mesh: $DMSH_VK_MESH_EXT_DIR"
 echo "save:        $DM_SAVE"
 echo "HUD:         $OOT_HUD_STATUS"
 echo "gfx tier:    $DM_GFX_SCALE (0 full size, 1 = 0.8, 2 = 0.67; DM_GFX_SCALE)"
+echo "upscaler:    $DM_UPSCALER (game preserves NDSR; linear is faster/softer; probe logs)"
 
 exec "$OOT_HOST" "$OOT_MODULES"
