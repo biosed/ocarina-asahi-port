@@ -20,15 +20,16 @@ the Kokiri load; later area transitions remain unvalidated.
 | OS | Fedora Asahi Remix 44, Linux aarch64, Wayland |
 | Kernel | `7.2.12-402.asahi.fc44.aarch64+16k` |
 | Game | title `0400486024DEC000`, update `v131072` |
-| Port | `port/` commit `99c46de3d1d5` |
+| Port | `port/` commit `7612f6d8c939` |
 | Driver | `mesa/` commit `059a6139be70` |
 | Standard shader chain | `8b975cd27f6e` |
-| Current performance | title and the first 85 seconds of the New Game WebM: 16.66 ms/frame and about 11.0--11.2 ms GPU; outdoor Kokiri frozen save at the launcher's tier 1: 38.3/35.0 ms with the game network, 34.7/31.0 ms with the near-network-quality opt-in FSR 1 scaler, or 33.8/30.2 ms with the softer opt-in linear scaler; full-size tier 0 is 40.7/37.2 ms |
+| Current performance | title and the first 85 seconds of the New Game WebM: 16.66 ms/frame and about 11.0--11.2 ms GPU; outdoor Kokiri frozen save at the launcher's tier 1: 38.3/35.0 ms with the game network, 33.7/31.0 ms with the near-network-quality opt-in FSR 1 scaler, or 33.8/30.2 ms with the softer opt-in linear scaler; full-size tier 0 is 40.7/37.2 ms |
 | Current memory | story-movie route: 9.75 GB cgroup peak with no swap or limit event; later in-engine opening: 12.89 GB peak and 100 MB swap under the 12/15/2 GB limits; a 32 GiB host is strongly recommended |
 
-These revisions collect two separately validated milestones. The port propagates
+These revisions collect separately validated milestones. The port propagates
 the direct draw base instance into translated shader state, restoring split
-dialogue glyph batches in a guarded matched-chain A/B. The driver enables the
+dialogue glyph batches in a guarded matched-chain A/B, and reuses descriptor
+sets only after their replay-ring fence has passed. The driver enables the
 validated G13 local load/store control bit by default; its full Asahi suite
 passes 122/122.
 
@@ -61,6 +62,16 @@ network measured 38.30/35.02 ms (p95 43.77/39.97). All three arms rendered the
 complete picture; the replacement arms reported zero audio underruns and no GPU
 timeout. The launcher keeps `game` as the default: both replacements change the
 look, and neither result proves a stable 30 fps floor or smooth gameplay.
+
+The current port pin removes steady-state descriptor-pool resets and per-cache-
+miss descriptor-set allocation. In a matched FSR 1 tier-1 A/B, replay CPU
+p50/p95/p99 fell from 17.44/18.96/19.69 ms to 15.34/16.81/17.49 ms. Delivered
+frame p50/p95/p99 improved from 34.02/36.02/36.92 ms to
+33.68/35.36/36.26 ms, and the share at or below 33.33 ms rose from 25.5% to
+35.9%. Both 300-second arms had complete UI text and gameplay captures, zero
+audio underruns and no GPU timeout. This is a measured CPU-side improvement,
+not evidence of a stable 30 fps floor; the remaining limit is about 31 ms of
+GPU work in this scene.
 
 M2/M3/M4 Linux systems have not been validated. This is not a macOS build. A
 BC-250/AMD target is planned, but the current Honeykrisp software-mesh path is
