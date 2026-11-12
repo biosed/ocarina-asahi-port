@@ -85,6 +85,44 @@ mkdir -p "$OOT_SAVE" "$OOT_TEMP" "$OOT_CACHE"
 # Keep the lightweight FPS/driver overlay visible for ordinary runs. Controlled
 # captures and benchmarks can still opt out explicitly with DM_HUD=0.
 : "${DM_HUD:=1}"
+# The port's F1 menu writes these two choices as plain key/value lines. Read
+# only the exact values it owns; this is configuration data, never shell code.
+# A non-empty launch variable still wins over the saved choice.
+OOT_GFX_SOURCE="launcher default"
+OOT_UPSCALER_SOURCE="launcher default"
+OOT_GFX_FROM_ENV=0
+OOT_UPSCALER_FROM_ENV=0
+if [[ -n ${DM_GFX_SCALE:-} ]]; then OOT_GFX_SOURCE="environment"; OOT_GFX_FROM_ENV=1; fi
+if [[ -n ${DM_UPSCALER:-} ]]; then OOT_UPSCALER_SOURCE="environment"; OOT_UPSCALER_FROM_ENV=1; fi
+if [[ -n ${DM_SETTINGS:-} ]]; then
+    OOT_SETTINGS_PATH=$DM_SETTINGS
+elif [[ -n ${XDG_CONFIG_HOME:-} ]]; then
+    OOT_SETTINGS_PATH="$XDG_CONFIG_HOME/nxnative-asahi/settings.conf"
+elif [[ -n ${HOME:-} ]]; then
+    OOT_SETTINGS_PATH="$HOME/.config/nxnative-asahi/settings.conf"
+else
+    OOT_SETTINGS_PATH=
+fi
+if [[ -n $OOT_SETTINGS_PATH && -f $OOT_SETTINGS_PATH && -r $OOT_SETTINGS_PATH && \
+      ( -z ${DM_GFX_SCALE:-} || -z ${DM_UPSCALER:-} ) ]]; then
+    while IFS= read -r OOT_SETTING_LINE || [[ -n $OOT_SETTING_LINE ]]; do
+        while [[ $OOT_SETTING_LINE == *[$' \t\r'] ]]; do OOT_SETTING_LINE=${OOT_SETTING_LINE%?}; done
+        case "$OOT_SETTING_LINE" in
+            gfx_scale=[0-2])
+                if (( !OOT_GFX_FROM_ENV )); then
+                    DM_GFX_SCALE=${OOT_SETTING_LINE#*=}
+                    OOT_GFX_SOURCE="menu settings: $OOT_SETTINGS_PATH"
+                fi
+                ;;
+            upscaler=game|upscaler=fsr1|upscaler=linear)
+                if (( !OOT_UPSCALER_FROM_ENV )); then
+                    DM_UPSCALER=${OOT_SETTING_LINE#*=}
+                    OOT_UPSCALER_SOURCE="menu settings: $OOT_SETTINGS_PATH"
+                fi
+                ;;
+        esac
+    done < "$OOT_SETTINGS_PATH"
+fi
 # Graphics scale tier answered to the game (port hle_oe.c: 0 full size, 1 = 0.8, 2 = 0.67 of
 # the docked render size; the game's own upscaler still produces the full picture). The port's
 # default is tier 0; on the M1 Pro baseline that costs about 2.4 ms a frame, so this launcher
@@ -96,6 +134,14 @@ mkdir -p "$OOT_SAVE" "$OOT_TEMP" "$OOT_CACHE"
 # probe logs stages but preserves the network (port vk_upscaler.h).
 : "${DM_UPSCALER:=game}"
 : "${DM_UPSCALER_SHARPNESS:=0.25}"
+
+case "$DM_GFX_SCALE" in
+    0|1|2) ;;
+    *)
+        echo "error: DM_GFX_SCALE must be 0, 1 or 2 (got: $DM_GFX_SCALE)" >&2
+        exit 2
+        ;;
+esac
 
 case "$DM_UPSCALER" in
     game|fsr1|linear|probe) ;;
@@ -163,8 +209,8 @@ echo "SPIR-V:      $DM_VK_SPV"
 echo "native mesh: $DMSH_VK_MESH_EXT_DIR"
 echo "save:        $DM_SAVE"
 echo "HUD:         $OOT_HUD_STATUS"
-echo "gfx tier:    $DM_GFX_SCALE (0 full size, 1 = 0.8, 2 = 0.67; DM_GFX_SCALE)"
-echo "upscaler:    $DM_UPSCALER (game preserves NDSR; fsr1 is faster/near-network; linear is fastest/softer; probe logs)"
+echo "gfx tier:    $DM_GFX_SCALE (0 full size, 1 = 0.8, 2 = 0.67; $OOT_GFX_SOURCE)"
+echo "upscaler:    $DM_UPSCALER ($OOT_UPSCALER_SOURCE; game preserves NDSR; fsr1 is faster/near-network; linear is fastest/softer; probe logs)"
 if [[ $DM_UPSCALER == fsr1 ]]; then
     echo "FSR RCAS:    $DM_UPSCALER_SHARPNESS stops (0 sharpest; valid range 0..8)"
 fi
