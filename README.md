@@ -20,11 +20,36 @@ the Kokiri load; later area transitions remain unvalidated.
 | OS | Fedora Asahi Remix 44, Linux aarch64, Wayland |
 | Kernel | `7.2.12-402.asahi.fc44.aarch64+16k` |
 | Game | title `0400486024DEC000`, update `v131072` |
-| Port | `port/` commit `09d20d39` |
-| Driver | `mesa/` commit `71ce0ae7bd6` |
-| Standard shader chain | `dd86b6066f89` |
-| Current performance | Kokiri outdoor snapshot route: 86 ms/frame p50, about 63 ms GPU |
-| Current memory | full mesh set plateaus at 12.6 GiB and stalls under the 12 GiB soft limit; a 32 GiB host is strongly recommended |
+| Port | `port/` commit `6f6de38ff28d` |
+| Driver | `mesa/` commit `059a6139be70` |
+| Standard shader chain | `8b975cd27f6e` |
+| Current performance | title and the first 85 seconds of the New Game WebM: 16.66 ms/frame and about 11.0--11.2 ms GPU; outdoor Kokiri frozen save on the exact pinned pair: 40.7/37.2 ms at tier 0 and 38.3/35.0 ms at `DM_GFX_SCALE=1` |
+| Current memory | story-movie route: 9.75 GB cgroup peak with no swap or limit event; later in-engine opening: 12.89 GB peak and 100 MB swap under the 12/15/2 GB limits; a 32 GiB host is strongly recommended |
+
+These revisions collect two separately validated milestones. The port propagates
+the direct draw base instance into translated shader state, restoring split
+dialogue glyph batches in a guarded matched-chain A/B. The driver enables the
+validated G13 local load/store control bit by default; its full Asahi suite
+passes 122/122.
+
+The exact combined revisions completed guarded title and opening routes. The
+2560x1440 title background movie visibly advanced between captures, the menu
+text and button label rendered, both scripted A presses landed, and the later
+in-engine opening rendered subtitles. A second 130-second route enabled every
+movie and played the first 85 seconds of the separate New Game WebM, from its
+tapestry sequence through Link asleep. Its frame median stayed at 16.66 ms with
+about 11.0--11.2 ms GPU, audio reported no underruns, and the cgroup used no
+swap. The later in-engine scene remained about 30--35 ms per frame. This proves
+title and sustained story video, input and opening presentation on the pinned
+pair, not all eight minutes of the story movie, movement, an area transition or
+smooth gameplay.
+
+Matched 300-second frozen-save arms on the same host, driver, shader sets and
+scripted route measured 40.73 ms/frame and 37.19 ms GPU at the default tier 0,
+and 38.30/35.02 ms at tier 1. Both used the compact compute timers only after
+frame 6,000, produced zero audio underruns, stayed below 11.21 GB without swap,
+and had no kernel GPU timeout. Tier 1 is therefore only a modest performance
+option, not a route to 60 fps; gameplay remains GPU-bound and not yet smooth.
 
 M2/M3/M4 Linux systems have not been validated. This is not a macOS build. A
 BC-250/AMD target is planned, but the current Honeykrisp software-mesh path is
@@ -320,6 +345,9 @@ expensive clean-up network is replaced by a checked copy of the decoded frame,
 while colour conversion and scaling still run. Set `DM_MOVIE_ENHANCE=1` to run
 the full network. The generic runtime keeps enhancement on unless this switch
 is explicitly set.
+Movies themselves default to `DM_MOVIES=all`. Set `DM_MOVIES=opening` only for
+a short development route that retains the title movies but hides the
+eight-minute New Game WebM, or `DM_MOVIES=off` to hide every WebM.
 
 ## Expected problems
 
