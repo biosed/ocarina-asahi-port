@@ -85,9 +85,9 @@ mkdir -p "$OOT_SAVE" "$OOT_TEMP" "$OOT_CACHE"
 : "${DM_HUD:=0}"
 # Graphics scale tier answered to the game (port hle_oe.c: 0 full size, 1 = 0.8, 2 = 0.67 of
 # the docked render size; the game's own upscaler still produces the full picture). The port's
-# default is tier 0; on the M1 Pro baseline that costs about 5.5 ms a frame, so this launcher
-# answers tier 1 (outdoor Kokiri, frozen save, 2026-11-12: tier 0 44.2 ms/frame and 38.5 ms
-# GPU, tier 1 38.7 / 34.6, tier 2 35.4 / 31.9). Set DM_GFX_SCALE=0 for the full-size picture.
+# default is tier 0; on the M1 Pro baseline that costs about 2.4 ms a frame, so this launcher
+# answers tier 1 (outdoor Kokiri, frozen save, port 6f6de38 + Mesa 059a613, 2026-11-12: tier 0
+# 40.7 ms/frame and 37.2 ms GPU, tier 1 38.3 / 35.0). Set DM_GFX_SCALE=0 for the full-size picture.
 : "${DM_GFX_SCALE:=1}"
 
 case "$DM_HUD" in
