@@ -23,7 +23,7 @@ the Kokiri load; later area transitions remain unvalidated.
 | Port | `port/` commit `6f6de38ff28d` |
 | Driver | `mesa/` commit `059a6139be70` |
 | Standard shader chain | `8b975cd27f6e` |
-| Current performance | title and the first 85 seconds of the New Game WebM: 16.66 ms/frame and about 11.0--11.2 ms GPU; outdoor Kokiri frozen save on the exact pinned pair: 40.7/37.2 ms at tier 0 and 38.3/35.0 ms at `DM_GFX_SCALE=1` |
+| Current performance | title and the first 85 seconds of the New Game WebM: 16.66 ms/frame and about 11.0--11.2 ms GPU; outdoor Kokiri frozen save on the exact pinned pair: 38.3/35.0 ms at the launcher's tier 1 (`DM_GFX_SCALE=1`, the default) and 40.7/37.2 ms at the full-size tier 0 |
 | Current memory | story-movie route: 9.75 GB cgroup peak with no swap or limit event; later in-engine opening: 12.89 GB peak and 100 MB swap under the 12/15/2 GB limits; a 32 GiB host is strongly recommended |
 
 These revisions collect two separately validated milestones. The port propagates
@@ -45,7 +45,7 @@ pair, not all eight minutes of the story movie, movement, an area transition or
 smooth gameplay.
 
 Matched 300-second frozen-save arms on the same host, driver, shader sets and
-scripted route measured 40.73 ms/frame and 37.19 ms GPU at the default tier 0,
+scripted route measured 40.73 ms/frame and 37.19 ms GPU at the full-size tier 0 (the port default),
 and 38.30/35.02 ms at tier 1. Both used the compact compute timers only after
 frame 6,000, produced zero audio underruns, stayed below 11.21 GB without swap,
 and had no kernel GPU timeout. Tier 1 is therefore only a modest performance
@@ -307,6 +307,12 @@ systemd-run --user --scope --collect \
   -p MemorySwapMax=2G \
   ./scripts/run-oot-asahi.sh "$OOT_BUILD" "$OOT_SPV" "$OOT_SPV"
 ```
+
+The launcher answers the game's graphics scale tier 1 by default (an 80% render
+size before the game's own upscaler): on the M1 Pro with the pinned pair it is
+about 2.4 ms a frame faster than the full-size tier 0 (38.3 against 40.7 ms in
+the outdoor Kokiri frozen-save route). Set `DM_GFX_SCALE=0` for the full-size
+picture or `2` for a smaller, softer render size.
 
 Set `DM_HUD=1` to enable a compact MangoHud FPS, frametime, GPU-name and
 Vulkan-driver overlay; Right Shift+F12 toggles it. MangoHud cannot currently
