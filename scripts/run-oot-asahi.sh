@@ -83,6 +83,12 @@ mkdir -p "$OOT_SAVE" "$OOT_TEMP" "$OOT_CACHE"
 : "${DM_CODEC_ACQUIRE_RESERVES:=1}"
 : "${DM_CODEC_MOVIE_B2T_LATEST:=1}"
 : "${DM_HUD:=0}"
+# Graphics scale tier answered to the game (port hle_oe.c: 0 full size, 1 = 0.8, 2 = 0.67 of
+# the docked render size; the game's own upscaler still produces the full picture). The port's
+# default is tier 0; on the M1 Pro baseline that costs about 5.5 ms a frame, so this launcher
+# answers tier 1 (outdoor Kokiri, frozen save, 2026-11-12: tier 0 44.2 ms/frame and 38.5 ms
+# GPU, tier 1 38.7 / 34.6, tier 2 35.4 / 31.9). Set DM_GFX_SCALE=0 for the full-size picture.
+: "${DM_GFX_SCALE:=1}"
 
 case "$DM_HUD" in
     0)
@@ -120,7 +126,7 @@ export \
     DM_VK_BINDLESS_FEEDBACK DM_VK_CB_RING DM_VK_ROBUST \
     DM_VK_PRECOMPILE DM_VK_GPU_HEARTBEAT DM_VK_OPS DM_VK_MESH_LOG \
     DM_VK_SHADER_COMPILE_LOG DM_WINDOW DM_AUDIO DM_FOCUS_KEEP DM_MOVIES DM_MOVIE_ENHANCE \
-    DM_CODEC_ACQUIRE_RESERVES DM_CODEC_MOVIE_B2T_LATEST DM_VK_SKIP_CS
+    DM_CODEC_ACQUIRE_RESERVES DM_CODEC_MOVIE_B2T_LATEST DM_VK_SKIP_CS DM_GFX_SCALE
 
 export DM_ROOT="$OOT_BUILD_DIR"
 export DM_ROMFS="$OOT_ROMFS"
@@ -141,5 +147,6 @@ echo "SPIR-V:      $DM_VK_SPV"
 echo "native mesh: $DMSH_VK_MESH_EXT_DIR"
 echo "save:        $DM_SAVE"
 echo "HUD:         $OOT_HUD_STATUS"
+echo "gfx tier:    $DM_GFX_SCALE (0 full size, 1 = 0.8, 2 = 0.67; DM_GFX_SCALE)"
 
 exec "$OOT_HOST" "$OOT_MODULES"

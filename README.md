@@ -283,6 +283,12 @@ systemd-run --user --scope --collect \
   ./scripts/run-oot-asahi.sh "$OOT_BUILD" "$OOT_SPV" "$OOT_SPV"
 ```
 
+The launcher answers the game's graphics scale tier 1 by default (an 80% render
+size before the game's own upscaler): on the M1 Pro it is about 5.5 ms a frame
+faster than the full-size tier 0 (38.7 against 44.2 ms in the outdoor Kokiri
+frozen-save route). Set `DM_GFX_SCALE=0` for the full-size picture or `2` for
+the cheapest (35.4 ms, softer).
+
 Set `DM_HUD=1` to enable a compact MangoHud FPS, frametime, GPU-name and
 Vulkan-driver overlay; Right Shift+F12 toggles it. MangoHud cannot currently
 sample Asahi GPU utilisation, so this launcher does not display a fake load.
