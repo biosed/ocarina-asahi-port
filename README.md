@@ -283,6 +283,10 @@ systemd-run --user --scope --collect \
   ./scripts/run-oot-asahi.sh "$OOT_BUILD" "$OOT_SPV" "$OOT_SPV"
 ```
 
+Set `DM_HUD=1` to enable a compact MangoHud FPS, frametime, GPU-name and
+Vulkan-driver overlay; Right Shift+F12 toggles it. MangoHud cannot currently
+sample Asahi GPU utilisation, so this launcher does not display a fake load.
+
 If standard and native mesh shaders were prepared into separate directories,
 pass the native mesh directory as the third argument instead.
 
