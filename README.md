@@ -336,6 +336,13 @@ about 2.4 ms a frame faster than the full-size tier 0 (38.3 against 40.7 ms in
 the outdoor Kokiri frozen-save route). Set `DM_GFX_SCALE=0` for the full-size
 picture or `2` for a smaller, softer render size.
 
+Press F1 (or Minus + Plus together on a controller) for the port's small
+in-game menu. Its upscaler choice applies immediately; its graphics-tier choice
+applies on the next launch. The launcher reads those saved choices from
+`${XDG_CONFIG_HOME:-$HOME/.config}/nxnative-asahi/settings.conf` (or
+`DM_SETTINGS`) without evaluating it as shell code. An explicitly supplied
+`DM_GFX_SCALE` or `DM_UPSCALER` overrides the corresponding saved choice.
+
 Set `DM_UPSCALER=fsr1` to replace the game's expensive NDSR reconstruction
 stage with source-built AMD FSR 1 EASU and RCAS. It saved about 3.6 ms/frame in
 the matched tier-1 outdoor route while keeping detail close to the network;
