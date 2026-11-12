@@ -82,6 +82,31 @@ mkdir -p "$OOT_SAVE" "$OOT_TEMP" "$OOT_CACHE"
 : "${DM_MOVIE_ENHANCE:=0}"
 : "${DM_CODEC_ACQUIRE_RESERVES:=1}"
 : "${DM_CODEC_MOVIE_B2T_LATEST:=1}"
+: "${DM_HUD:=0}"
+
+case "$DM_HUD" in
+    0)
+        OOT_HUD_STATUS="off (set DM_HUD=1 to enable)"
+        ;;
+    1)
+        if ! command -v mangohud >/dev/null 2>&1; then
+            echo "error: DM_HUD=1 requires MangoHud (Fedora: sudo dnf install mangohud)" >&2
+            exit 1
+        fi
+        MANGOHUD=1
+        if [[ -z ${MANGOHUD_CONFIG+x} && -z ${MANGOHUD_CONFIGFILE+x} ]]; then
+            # MangoHud does not sample Asahi GPU utilisation yet. Show the
+            # Vulkan GPU/driver identity without inventing a load figure.
+            MANGOHUD_CONFIG="fps,frametime,gpu_name,vulkan_driver,gpu_stats=0,cpu_stats=0,frame_timing=0,throttling_status=0,position=top-left,toggle_hud=Shift_R+F12"
+        fi
+        export MANGOHUD MANGOHUD_CONFIG
+        OOT_HUD_STATUS="MangoHud (Right Shift+F12 toggles visibility)"
+        ;;
+    *)
+        echo "error: DM_HUD must be 0 or 1 (got: $DM_HUD)" >&2
+        exit 2
+        ;;
+esac
 
 # Run the translated NDVE/NDSR chain by default. DM_VK_SKIP_CS remains an
 # explicit exact-key diagnostic; setting it deliberately makes the rendered
@@ -115,5 +140,6 @@ echo "game build:  $OOT_BUILD_DIR"
 echo "SPIR-V:      $DM_VK_SPV"
 echo "native mesh: $DMSH_VK_MESH_EXT_DIR"
 echo "save:        $DM_SAVE"
+echo "HUD:         $OOT_HUD_STATUS"
 
 exec "$OOT_HOST" "$OOT_MODULES"
