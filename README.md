@@ -20,10 +20,10 @@ the Kokiri load; later area transitions remain unvalidated.
 | OS | Fedora Asahi Remix 44, Linux aarch64, Wayland |
 | Kernel | `7.2.12-402.asahi.fc44.aarch64+16k` |
 | Game | title `0400486024DEC000`, update `v131072` |
-| Port | `port/` commit `6f6de38ff28d` |
+| Port | `port/` commit `1415bd500902` |
 | Driver | `mesa/` commit `059a6139be70` |
 | Standard shader chain | `8b975cd27f6e` |
-| Current performance | title and the first 85 seconds of the New Game WebM: 16.66 ms/frame and about 11.0--11.2 ms GPU; outdoor Kokiri frozen save on the exact pinned pair: 38.3/35.0 ms at the launcher's tier 1 (`DM_GFX_SCALE=1`, the default) and 40.7/37.2 ms at the full-size tier 0 |
+| Current performance | title and the first 85 seconds of the New Game WebM: 16.66 ms/frame and about 11.0--11.2 ms GPU; outdoor Kokiri frozen save at the launcher's tier 1: 38.3/35.0 ms with the game network, or 33.8/30.2 ms with the softer opt-in linear scaler; full-size tier 0 is 40.7/37.2 ms |
 | Current memory | story-movie route: 9.75 GB cgroup peak with no swap or limit event; later in-engine opening: 12.89 GB peak and 100 MB swap under the 12/15/2 GB limits; a 32 GiB host is strongly recommended |
 
 These revisions collect two separately validated milestones. The port propagates
@@ -50,6 +50,15 @@ and 38.30/35.02 ms at tier 1. Both used the compact compute timers only after
 frame 6,000, produced zero audio underruns, stayed below 11.21 GB without swap,
 and had no kernel GPU timeout. Tier 1 is therefore only a modest performance
 option, not a route to 60 fps; gameplay remains GPU-bound and not yet smooth.
+
+The pinned port also supplies `DM_UPSCALER=linear`, an opt-in Vulkan bilinear
+replacement for the title's tensor-oriented NDSR reconstruction stage. A
+matched tier-1 arm measured 33.76 ms/frame and 30.24 ms GPU (p95 39.17/35.50),
+against 38.30/35.02 (p95 43.77/39.97) with the game network. It produced the
+complete picture with zero audio underruns and no GPU timeout, but the result is
+visibly softer and aliases thin edges. The launcher therefore keeps `game` as
+the default; `linear` is a performance/quality choice, not a conformance or
+smooth-gameplay claim.
 
 M2/M3/M4 Linux systems have not been validated. This is not a macOS build. A
 BC-250/AMD target is planned, but the current Honeykrisp software-mesh path is
@@ -313,6 +322,12 @@ size before the game's own upscaler): on the M1 Pro with the pinned pair it is
 about 2.4 ms a frame faster than the full-size tier 0 (38.3 against 40.7 ms in
 the outdoor Kokiri frozen-save route). Set `DM_GFX_SCALE=0` for the full-size
 picture or `2` for a smaller, softer render size.
+
+Set `DM_UPSCALER=linear` to replace the game's expensive NDSR reconstruction
+stage with the source-built bilinear Vulkan compute shader. This improves the
+matched tier-1 outdoor route by about 4.5 ms/frame but is visibly softer. The
+default `DM_UPSCALER=game` preserves the title's network; `probe` preserves it
+while logging stage shapes and formats.
 
 Set `DM_HUD=1` to enable a compact MangoHud FPS, frametime, GPU-name and
 Vulkan-driver overlay; Right Shift+F12 toggles it. MangoHud cannot currently
