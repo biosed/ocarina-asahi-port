@@ -82,7 +82,9 @@ mkdir -p "$OOT_SAVE" "$OOT_TEMP" "$OOT_CACHE"
 : "${DM_MOVIE_ENHANCE:=0}"
 : "${DM_CODEC_ACQUIRE_RESERVES:=1}"
 : "${DM_CODEC_MOVIE_B2T_LATEST:=1}"
-: "${DM_HUD:=0}"
+# Keep the lightweight FPS/driver overlay visible for ordinary runs. Controlled
+# captures and benchmarks can still opt out explicitly with DM_HUD=0.
+: "${DM_HUD:=1}"
 # Graphics scale tier answered to the game (port hle_oe.c: 0 full size, 1 = 0.8, 2 = 0.67 of
 # the docked render size; the game's own upscaler still produces the full picture). The port's
 # default is tier 0; on the M1 Pro baseline that costs about 2.4 ms a frame, so this launcher
